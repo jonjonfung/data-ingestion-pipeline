@@ -64,6 +64,33 @@ class EtoroPipelineStack(Stack):
         )
 
         # Glue table — positions (queryable via Athena)
+        # Glue table — instruments reference (name, symbol, type)
+        glue.CfnTable(
+            self, "InstrumentsTable",
+            catalog_id=self.account,
+            database_name="etoro_db",
+            table_input=glue.CfnTable.TableInputProperty(
+                name="instruments",
+                description="eToro instrument metadata (name, symbol, type)",
+                table_type="EXTERNAL_TABLE",
+                parameters={"classification": "json"},
+                storage_descriptor=glue.CfnTable.StorageDescriptorProperty(
+                    location="s3://etoro-pipeline-john/instruments/",
+                    input_format="org.apache.hadoop.mapred.TextInputFormat",
+                    output_format="org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat",
+                    serde_info=glue.CfnTable.SerdeInfoProperty(
+                        serialization_library="org.openx.data.jsonserde.JsonSerDe",
+                    ),
+                    columns=[
+                        glue.CfnTable.ColumnProperty(name="instrument_id", type="int"),
+                        glue.CfnTable.ColumnProperty(name="name", type="string"),
+                        glue.CfnTable.ColumnProperty(name="symbol", type="string"),
+                        glue.CfnTable.ColumnProperty(name="type_id", type="int"),
+                    ],
+                ),
+            ),
+        ).add_dependency(database)
+
         glue.CfnTable(
             self, "PositionsTable",
             catalog_id=self.account,
