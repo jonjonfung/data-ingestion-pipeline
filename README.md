@@ -21,8 +21,8 @@ etoro/
 
 2. Copy `.env.example` to `.env` and fill in your keys:
    ```
-   ETORO_API_KEY=your_api_key
-   ETORO_USER_KEY=your_user_key
+   ETORO_PUBLIC_KEY=your_public_key
+   ETORO_PRIVATE_KEY=your_private_key
    ```
    Get your keys from eToro: Settings > Trading > API Key Management
 
