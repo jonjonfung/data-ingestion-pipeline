@@ -12,6 +12,8 @@ def _headers():
         "x-api-key": os.getenv("ETORO_PUBLIC_KEY"),
         "x-user-key": os.getenv("ETORO_PRIVATE_KEY"),
         "x-request-id": str(uuid.uuid4()),
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json",
     }
 
 
