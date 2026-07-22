@@ -1,0 +1,42 @@
+name: 🏗️ Deploy Infra
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - "app.py"
+      - "cdk.json"
+  workflow_dispatch:
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
+  deploy:
+    name: 🚀 CDK Deploy
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ✅ Checkout
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: 📦 Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: 🟨 Install CDK
+        run: npm install -g aws-cdk
+
+      - name: 🏗️ CDK Deploy
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ap-southeast-2
+        run: cdk deploy --require-approval never

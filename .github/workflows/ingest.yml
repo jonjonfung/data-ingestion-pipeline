@@ -1,0 +1,36 @@
+name: 📥 Ingest
+
+on:
+  schedule:
+    - cron: "0 1 * * *"  # daily at 1am UTC
+  workflow_dispatch:      # manual trigger
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
+  ingest:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run eToro portfolio ingestion
+        env:
+          ETORO_PUBLIC_KEY: ${{ secrets.ETORO_PUBLIC_KEY }}
+          ETORO_PRIVATE_KEY: ${{ secrets.ETORO_PRIVATE_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ap-southeast-2
+        run: python -m etoro.cli --save
