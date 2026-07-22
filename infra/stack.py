@@ -91,6 +91,40 @@ class EtoroPipelineStack(Stack):
             ),
         ).add_dependency(database)
 
+        # Glue table — closed trades history
+        glue.CfnTable(
+            self, "TradesTable",
+            catalog_id=self.account,
+            database_name="etoro_db",
+            table_input=glue.CfnTable.TableInputProperty(
+                name="trades",
+                description="eToro closed trade history",
+                table_type="EXTERNAL_TABLE",
+                parameters={"classification": "json"},
+                storage_descriptor=glue.CfnTable.StorageDescriptorProperty(
+                    location="s3://etoro-pipeline-john/trades/",
+                    input_format="org.apache.hadoop.mapred.TextInputFormat",
+                    output_format="org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat",
+                    serde_info=glue.CfnTable.SerdeInfoProperty(
+                        serialization_library="org.openx.data.jsonserde.JsonSerDe",
+                    ),
+                    columns=[
+                        glue.CfnTable.ColumnProperty(name="trade_id", type="bigint"),
+                        glue.CfnTable.ColumnProperty(name="instrument_id", type="int"),
+                        glue.CfnTable.ColumnProperty(name="is_buy", type="boolean"),
+                        glue.CfnTable.ColumnProperty(name="open_date", type="string"),
+                        glue.CfnTable.ColumnProperty(name="close_date", type="string"),
+                        glue.CfnTable.ColumnProperty(name="investment", type="double"),
+                        glue.CfnTable.ColumnProperty(name="net_profit", type="double"),
+                        glue.CfnTable.ColumnProperty(name="open_rate", type="double"),
+                        glue.CfnTable.ColumnProperty(name="close_rate", type="double"),
+                        glue.CfnTable.ColumnProperty(name="fees", type="double"),
+                        glue.CfnTable.ColumnProperty(name="leverage", type="int"),
+                    ],
+                ),
+            ),
+        ).add_dependency(database)
+
         glue.CfnTable(
             self, "PositionsTable",
             catalog_id=self.account,
