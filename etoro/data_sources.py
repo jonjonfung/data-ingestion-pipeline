@@ -1,13 +1,9 @@
-"""
-Fetch portfolio positions, total invested, and unrealized P&L from eToro.
-"""
-
-from . import get
+from .api_client import get
 
 
-def get_summary(account_type: str = "real") -> dict:
+def fetch_portfolio(account_type: str = "real") -> dict:
     """
-    Returns a clean summary of open positions with invested amounts and P&L.
+    Fetch raw portfolio positions, invested amounts, and P&L from eToro.
     account_type: 'real' or 'demo'
     """
     data = get(f"/trading/info/{account_type}/pnl")
@@ -39,24 +35,3 @@ def get_summary(account_type: str = "real") -> dict:
         "total_invested": round(total_invested, 2),
         "total_unrealized_pnl": round(total_pnl, 2),
     }
-
-
-def print_summary(account_type: str = "real"):
-    summary = get_summary(account_type)
-
-    print(f"\n=== eToro Portfolio ({summary['account_type'].upper()}) ===")
-    print(f"Total Invested:   ${summary['total_invested']:,.2f}")
-    print(f"Unrealized P&L:   ${summary['total_unrealized_pnl']:,.2f}")
-    print(f"\nOpen Positions ({len(summary['positions'])}):")
-    print(f"{'Instrument':<20} {'Invested':>12} {'P&L':>12}")
-    print("-" * 46)
-    for p in summary["positions"]:
-        print(f"{str(p['instrument_id']):<20} ${p['amount']:>10,.2f} ${p['unrealized_pnl']:>10,.2f}")
-
-
-if __name__ == "__main__":
-    import sys
-    from dotenv import load_dotenv
-    load_dotenv()
-    account_type = sys.argv[1] if len(sys.argv) > 1 else "real"
-    print_summary(account_type)
