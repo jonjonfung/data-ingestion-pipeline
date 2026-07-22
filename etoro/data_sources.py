@@ -6,7 +6,8 @@ def fetch_portfolio(account_type: str = "real") -> dict:
     Fetch raw portfolio positions, invested amounts, and P&L from eToro.
     account_type: 'real' or 'demo'
     """
-    data = get(f"/trading/info/{account_type}/pnl")
+    raw = get(f"/trading/info/{account_type}/pnl")
+    data = raw.get("clientPortfolio", raw)
 
     positions = []
 
