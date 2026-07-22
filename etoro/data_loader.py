@@ -12,17 +12,38 @@ def _s3():
 
 def save_portfolio(data: dict):
     """
-    Save portfolio snapshot to S3 as JSON, partitioned by date.
-    s3://etoro-pipeline-john/portfolio/YYYY-MM-DD/snapshot.json
+    Save portfolio snapshot two ways:
+    1. Full JSON snapshot: s3://etoro-pipeline-john/portfolio/YYYY-MM-DD/snapshot.json
+    2. JSONL positions:    s3://etoro-pipeline-john/positions/date=YYYY-MM-DD/data.jsonl
+       (Hive-partitioned so Athena can query it)
     """
     date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    key = f"portfolio/{date}/snapshot.json"
+    s3 = _s3()
 
-    _s3().put_object(
+    # Full snapshot
+    s3.put_object(
         Bucket=BUCKET,
-        Key=key,
+        Key=f"portfolio/{date}/snapshot.json",
         Body=json.dumps(data, indent=2),
         ContentType="application/json",
     )
 
-    print(f"Saved to s3://{BUCKET}/{key}")
+    # Positions as JSONL for Athena
+    lines = []
+    for p in data.get("positions", []):
+        lines.append(json.dumps({
+            "instrument_id": p.get("instrument_id"),
+            "amount": p.get("amount"),
+            "unrealized_pnl": p.get("unrealized_pnl"),
+            "mirror_id": p.get("mirror_id"),
+            "date": date,
+        }))
+
+    s3.put_object(
+        Bucket=BUCKET,
+        Key=f"positions/date={date}/data.jsonl",
+        Body="\n".join(lines),
+        ContentType="application/x-ndjson",
+    )
+
+    print(f"Saved snapshot and {len(lines)} positions to s3://{BUCKET}/")

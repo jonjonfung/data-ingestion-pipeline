@@ -4,6 +4,7 @@ from aws_cdk import aws_s3 as s3
 from aws_cdk import aws_lambda as lambda_
 from aws_cdk import aws_events as events
 from aws_cdk import aws_events_targets as targets
+from aws_cdk import aws_glue as glue
 from constructs import Construct
 
 
@@ -51,3 +52,43 @@ class EtoroPipelineStack(Stack):
             schedule=events.Schedule.cron(minute="0", hour="1", week_day="MON"),
         )
         rule.add_target(targets.LambdaFunction(fn))
+
+        # Glue database
+        database = glue.CfnDatabase(
+            self, "EtoroDB",
+            catalog_id=self.account,
+            database_input=glue.CfnDatabase.DatabaseInputProperty(
+                name="etoro_db",
+                description="eToro portfolio data",
+            ),
+        )
+
+        # Glue table — positions (queryable via Athena)
+        glue.CfnTable(
+            self, "PositionsTable",
+            catalog_id=self.account,
+            database_name="etoro_db",
+            table_input=glue.CfnTable.TableInputProperty(
+                name="positions",
+                description="Weekly eToro position snapshots",
+                table_type="EXTERNAL_TABLE",
+                parameters={"classification": "json"},
+                partition_keys=[
+                    glue.CfnTable.ColumnProperty(name="date", type="string")
+                ],
+                storage_descriptor=glue.CfnTable.StorageDescriptorProperty(
+                    location=f"s3://etoro-pipeline-john/positions/",
+                    input_format="org.apache.hadoop.mapred.TextInputFormat",
+                    output_format="org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat",
+                    serde_info=glue.CfnTable.SerdeInfoProperty(
+                        serialization_library="org.openx.data.jsonserde.JsonSerDe",
+                    ),
+                    columns=[
+                        glue.CfnTable.ColumnProperty(name="instrument_id", type="int"),
+                        glue.CfnTable.ColumnProperty(name="amount", type="double"),
+                        glue.CfnTable.ColumnProperty(name="unrealized_pnl", type="double"),
+                        glue.CfnTable.ColumnProperty(name="mirror_id", type="string"),
+                    ],
+                ),
+            ),
+        ).add_dependency(database)
