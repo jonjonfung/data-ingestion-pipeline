@@ -1,9 +1,9 @@
+import os
 from aws_cdk import Stack, RemovalPolicy, Duration, BundlingOptions
 from aws_cdk import aws_s3 as s3
 from aws_cdk import aws_lambda as lambda_
 from aws_cdk import aws_events as events
 from aws_cdk import aws_events_targets as targets
-from aws_cdk import aws_iam as iam
 from constructs import Construct
 
 
@@ -36,19 +36,17 @@ class EtoroPipelineStack(Stack):
                     ],
                 ),
             ),
-            environment={"S3_BUCKET": bucket.bucket_name},
+            environment={
+                "S3_BUCKET": bucket.bucket_name,
+                "ETORO_PUBLIC_KEY": os.environ["ETORO_PUBLIC_KEY"],
+                "ETORO_PRIVATE_KEY": os.environ["ETORO_PRIVATE_KEY"],
+            },
             timeout=Duration.seconds(30),
             memory_size=128,
         )
 
         # Grant Lambda write access to S3
         bucket.grant_write(fn)
-
-        # Grant Lambda read access to SSM secrets
-        fn.add_to_role_policy(iam.PolicyStatement(
-            actions=["ssm:GetParameter"],
-            resources=["arn:aws:ssm:ap-southeast-2:*:parameter/etoro/*"],
-        ))
 
         # EventBridge — triggers Lambda every Monday at 1am UTC
         rule = events.Rule(

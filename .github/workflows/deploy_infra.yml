@@ -39,4 +39,6 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ap-southeast-2
+          ETORO_PUBLIC_KEY: ${{ secrets.ETORO_PUBLIC_KEY }}
+          ETORO_PRIVATE_KEY: ${{ secrets.ETORO_PRIVATE_KEY }}
         run: cdk deploy --require-approval never

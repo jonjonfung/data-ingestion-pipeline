@@ -7,7 +7,7 @@ Data ingestion pipelines for pulling personal finance and trading data from exte
 - **Lambda** runs the ingestion (free tier)
 - **EventBridge** triggers Lambda every Monday at 1am UTC (free)
 - **S3** stores weekly portfolio snapshots as JSON (free tier)
-- **SSM Parameter Store** holds eToro API secrets (free)
+- **GitHub Actions secrets** hold eToro API keys, injected into Lambda at deploy time
 - **GitHub Actions** handles CI and infra deployments
 
 ## Structure
@@ -46,14 +46,7 @@ pip install -r requirements.txt
 npm install -g aws-cdk
 ```
 
-### 2. Store eToro secrets in SSM
-
-```bash
-aws ssm put-parameter --name /etoro/public_key --value "YOUR_PUBLIC_KEY" --type SecureString
-aws ssm put-parameter --name /etoro/private_key --value "YOUR_PRIVATE_KEY" --type SecureString
-```
-
-### 3. Deploy infrastructure
+### 2. Deploy infrastructure
 
 ```bash
 cdk deploy
@@ -61,11 +54,13 @@ cdk deploy
 
 This provisions the S3 bucket, Lambda function, and weekly EventBridge schedule.
 
-### 4. Add GitHub Actions secrets
+### 3. Add GitHub Actions secrets
 
 In your repo settings, add:
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
+- `ETORO_PUBLIC_KEY`
+- `ETORO_PRIVATE_KEY`
 
 ### 5. Test locally
 
