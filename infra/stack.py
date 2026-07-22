@@ -1,5 +1,5 @@
 import os
-from aws_cdk import Stack, RemovalPolicy, Duration, BundlingOptions
+from aws_cdk import Stack, RemovalPolicy, Duration
 from aws_cdk import aws_s3 as s3
 from aws_cdk import aws_lambda as lambda_
 from aws_cdk import aws_events as events
@@ -27,14 +27,11 @@ class EtoroPipelineStack(Stack):
             handler="lambda_handler.main",
             code=lambda_.Code.from_asset(
                 ".",
-                exclude=["venv", ".git", "**/__pycache__", "**/*.pyc", ".env", "tests", "infra", "app.py", "cdk.json"],
-                bundling=BundlingOptions(
-                    image=lambda_.Runtime.PYTHON_3_12.bundling_image,
-                    command=[
-                        "bash", "-c",
-                        "pip install requests -t /asset-output && cp -r etoro /asset-output/ && cp lambda_handler.py /asset-output/",
-                    ],
-                ),
+                exclude=[
+                    "venv", ".git", "cdk.out", "tests", "infra",
+                    "**/__pycache__", "**/*.pyc", ".env",
+                    "app.py", "cdk.json", "requirements.txt", "README.md",
+                ],
             ),
             environment={
                 "S3_BUCKET": bucket.bucket_name,

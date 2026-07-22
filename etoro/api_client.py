@@ -1,6 +1,8 @@
 import os
 import uuid
-import requests
+import json
+import urllib.request
+import urllib.error
 
 BASE_URL = "https://public-api.etoro.com/api/v1"
 
@@ -14,7 +16,9 @@ def _headers():
 
 
 def get(path: str) -> dict:
-    response = requests.get(f"{BASE_URL}{path}", headers=_headers())
-    if not response.ok:
-        raise RuntimeError(f"eToro API error {response.status_code}: {response.text}")
-    return response.json()
+    req = urllib.request.Request(f"{BASE_URL}{path}", headers=_headers())
+    try:
+        with urllib.request.urlopen(req) as response:
+            return json.loads(response.read())
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"eToro API error {e.code}: {e.read().decode()}")
