@@ -15,5 +15,6 @@ def _headers():
 
 def get(path: str) -> dict:
     response = requests.get(f"{BASE_URL}{path}", headers=_headers())
-    response.raise_for_status()
+    if not response.ok:
+        raise RuntimeError(f"eToro API error {response.status_code}: {response.text}")
     return response.json()
