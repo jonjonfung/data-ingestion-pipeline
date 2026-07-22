@@ -32,7 +32,7 @@ class EtoroPipelineStack(Stack):
                     image=lambda_.Runtime.PYTHON_3_12.bundling_image,
                     command=[
                         "bash", "-c",
-                        "pip install requests -t /asset-output && cp -au . /asset-output",
+                        "pip install requests -t /asset-output && cp -r etoro /asset-output/ && cp lambda_handler.py /asset-output/",
                     ],
                 ),
             ),
