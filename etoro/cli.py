@@ -9,13 +9,12 @@ Usage:
 
 import argparse
 from dotenv import load_dotenv
-
-load_dotenv()
-
 from .data_sources import fetch_portfolio
 from .data_loader import save_portfolio
 from .instruments import fetch_instruments, save_instruments
 from .trades import fetch_trades, save_trades
+
+load_dotenv()
 
 
 def main():

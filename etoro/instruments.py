@@ -1,6 +1,5 @@
 import json
 import boto3
-from datetime import datetime, timezone
 from .api_client import get
 
 BUCKET = "etoro-pipeline-john"
