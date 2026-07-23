@@ -10,31 +10,95 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
-    uses: ./.github/workflows/test.yml
-
-  deploy:
-    name: 🚀 CDK Deploy
-    needs: test
+  lint:
+    name: 🔍 Lint
     runs-on: ubuntu-latest
-
     steps:
-      - name: ✅ Checkout
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: 🐍 Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
 
-      - name: 📦 Install dependencies
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Run linter
+        run: ruff check etoro/ lambda_handler.py --select E,F --ignore E501
+
+  test:
+    name: 🧪 Test
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest
+
+      - name: Run tests
+        run: pytest tests/ -v
+
+  validate:
+    name: 🔎 CDK Synth
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: 🟨 Install CDK
+      - name: Install CDK
         run: npm install -g aws-cdk
 
-      - name: 🏗️ CDK Deploy
+      - name: CDK Synth (validate template)
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ap-southeast-2
+          ETORO_PUBLIC_KEY: ${{ secrets.ETORO_PUBLIC_KEY }}
+          ETORO_PRIVATE_KEY: ${{ secrets.ETORO_PRIVATE_KEY }}
+        run: cdk synth
+
+  deploy:
+    name: 🚀 CDK Deploy
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install CDK
+        run: npm install -g aws-cdk
+
+      - name: Deploy stack
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -42,3 +106,31 @@ jobs:
           ETORO_PUBLIC_KEY: ${{ secrets.ETORO_PUBLIC_KEY }}
           ETORO_PRIVATE_KEY: ${{ secrets.ETORO_PRIVATE_KEY }}
         run: cdk deploy --require-approval never
+
+  smoke-test:
+    name: ✅ Smoke Test
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify stack is COMPLETE
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ap-southeast-2
+        run: |
+          STATUS=$(aws cloudformation describe-stacks \
+            --stack-name EtoroPipelineStack \
+            --query "Stacks[0].StackStatus" \
+            --output text)
+          echo "Stack status: $STATUS"
+          if [[ "$STATUS" != "UPDATE_COMPLETE" && "$STATUS" != "CREATE_COMPLETE" ]]; then
+            echo "Unexpected stack status: $STATUS"
+            exit 1
+          fi
+
+      - name: Verify S3 bucket exists
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ap-southeast-2
+        run: aws s3 ls s3://etoro-pipeline-john/ --summarize
