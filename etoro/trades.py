@@ -16,7 +16,7 @@ def fetch_trades(min_date: str = "2020-01-01") -> list[dict]:
 
     while True:
         data = get(f"/trading/info/trade/history?minDate={min_date}&page={page}&pageSize=100")
-        items = data.get("history", data.get("items", []))
+        items = data if isinstance(data, list) else data.get("history", data.get("items", []))
 
         if not items:
             break
