@@ -69,8 +69,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ap-southeast-2
-          PYTHONPATH: .
-        run: python scripts/ingest_portfolio.py
+        run: PYTHONPATH=. python scripts/ingest_portfolio.py
 
   ingest-trades:
     name: 📈 Ingest Trades
@@ -96,8 +95,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ap-southeast-2
-          PYTHONPATH: .
-        run: python scripts/ingest_trades.py
+        run: PYTHONPATH=. python scripts/ingest_trades.py
 
   done:
     name: ✅ Done
