@@ -25,7 +25,7 @@ jobs:
         run: pip install ruff
 
       - name: Run linter
-        run: ruff check etoro/ lambda_handler.py --select E,F --ignore E501
+        run: ruff check sources/ lambda_handler.py --select E,F --ignore E501
 
   test:
     name: 🧪 Unit Tests
