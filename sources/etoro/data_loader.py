@@ -35,6 +35,7 @@ def save_portfolio(data: dict):
             "instrument_id": p.get("instrument_id"),
             "amount": p.get("amount"),
             "unrealized_pnl": p.get("unrealized_pnl"),
+            "total_fees": p.get("total_fees"),
             "mirror_id": p.get("mirror_id"),
             "date": date,
         }))

@@ -16,6 +16,7 @@ def fetch_portfolio(account_type: str = "real") -> dict:
             "instrument_id": p.get("instrumentID"),
             "amount": p.get("amount", 0),
             "unrealized_pnl": p.get("unrealizedPnL", {}).get("pnL", 0),
+            "total_fees": p.get("totalFees", 0),
         })
 
     for mirror in data.get("mirrors", []):
@@ -24,6 +25,7 @@ def fetch_portfolio(account_type: str = "real") -> dict:
                 "instrument_id": p.get("instrumentID"),
                 "amount": p.get("amount", 0),
                 "unrealized_pnl": p.get("unrealizedPnL", {}).get("pnL", 0),
+                "total_fees": p.get("totalFees", 0),
                 "mirror_id": mirror.get("mirrorId"),
             })
 

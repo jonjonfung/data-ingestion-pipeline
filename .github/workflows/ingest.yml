@@ -23,7 +23,7 @@ jobs:
         run: pip install ruff
 
       - name: Run linter
-        run: ruff check etoro/ lambda_handler.py --select E,F --ignore E501
+        run: ruff check sources/ lambda_handler.py --select E,F --ignore E501
 
   test:
     name: 🧪 Test
@@ -43,7 +43,7 @@ jobs:
         run: pip install -r requirements.txt pytest
 
       - name: Run tests
-        run: pytest tests/ -v
+        run: pytest tests/ -v --tb=short
 
   ingest-portfolio:
     name: 📊 Ingest Portfolio
@@ -97,9 +97,35 @@ jobs:
           AWS_DEFAULT_REGION: ap-southeast-2
         run: PYTHONPATH=. python scripts/ingest_trades.py
 
+  ingest-t212-portfolio:
+    name: 📊 Ingest Trading212 Portfolio
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Fetch and save Trading212 portfolio, dividends & orders
+        env:
+          TRADING212_API_KEY: ${{ secrets.TRADING212_API_KEY }}
+          TRADING212_API_SECRET: ${{ secrets.TRADING212_API_SECRET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ap-southeast-2
+        run: PYTHONPATH=. python scripts/ingest_t212_portfolio.py
+
   done:
     name: ✅ Done
-    needs: [ingest-portfolio, ingest-trades]
+    needs: [ingest-portfolio, ingest-trades, ingest-t212-portfolio]
     runs-on: ubuntu-latest
     steps:
       - name: Verify data landed in S3
@@ -108,7 +134,10 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ap-southeast-2
         run: |
-          echo "=== S3 bucket contents ==="
+          echo "=== eToro S3 bucket ==="
           aws s3 ls s3://etoro-pipeline-john/ --recursive --human-readable \
+            | sort | tail -20
+          echo "=== Trading212 S3 bucket ==="
+          aws s3 ls s3://trading212-pipeline-john/ --recursive --human-readable \
             | sort | tail -20
           echo "=== Ingest complete ==="

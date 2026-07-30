@@ -20,6 +20,13 @@ class EtoroPipelineStack(Stack):
             removal_policy=RemovalPolicy.RETAIN,
         )
 
+        t212_bucket = s3.Bucket(
+            self, "T212Bucket",
+            bucket_name="trading212-pipeline-john",
+            versioned=True,
+            removal_policy=RemovalPolicy.RETAIN,
+        )
+
         # Lambda — runs the ingestion
         fn = lambda_.Function(
             self, "EtoroIngestFn",
@@ -32,12 +39,14 @@ class EtoroPipelineStack(Stack):
                     "venv", ".git", "cdk.out", "tests", "infra",
                     "**/__pycache__", "**/*.pyc", ".env",
                     "app.py", "cdk.json", "requirements.txt", "README.md",
+                    "scripts",
                 ],
             ),
             environment={
                 "S3_BUCKET": bucket.bucket_name,
                 "ETORO_PUBLIC_KEY": os.environ["ETORO_PUBLIC_KEY"],
                 "ETORO_PRIVATE_KEY": os.environ["ETORO_PRIVATE_KEY"],
+                "TRADING212_API_KEY": os.environ["TRADING212_API_KEY"],
             },
             timeout=Duration.seconds(30),
             memory_size=128,
@@ -45,6 +54,7 @@ class EtoroPipelineStack(Stack):
 
         # Grant Lambda write access to S3
         bucket.grant_write(fn)
+        t212_bucket.grant_write(fn)
 
         # EventBridge — triggers Lambda every Monday at 1am UTC
         rule = events.Rule(
@@ -153,3 +163,74 @@ class EtoroPipelineStack(Stack):
                 ),
             ),
         ).add_dependency(database)
+
+        # --- Trading212 Glue database and tables ---
+        t212_database = glue.CfnDatabase(
+            self, "T212DB",
+            catalog_id=self.account,
+            database_input=glue.CfnDatabase.DatabaseInputProperty(
+                name="trading212_db",
+                description="Trading212 portfolio data",
+            ),
+        )
+
+        glue.CfnTable(
+            self, "T212DividendsTable",
+            catalog_id=self.account,
+            database_name="trading212_db",
+            table_input=glue.CfnTable.TableInputProperty(
+                name="dividends",
+                description="Trading212 dividend payment history",
+                table_type="EXTERNAL_TABLE",
+                parameters={"classification": "json"},
+                storage_descriptor=glue.CfnTable.StorageDescriptorProperty(
+                    location="s3://trading212-pipeline-john/dividends/",
+                    input_format="org.apache.hadoop.mapred.TextInputFormat",
+                    output_format="org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat",
+                    serde_info=glue.CfnTable.SerdeInfoProperty(
+                        serialization_library="org.openx.data.jsonserde.JsonSerDe",
+                    ),
+                    columns=[
+                        glue.CfnTable.ColumnProperty(name="ticker", type="string"),
+                        glue.CfnTable.ColumnProperty(name="amount", type="double"),
+                        glue.CfnTable.ColumnProperty(name="gross_amount_per_share", type="double"),
+                        glue.CfnTable.ColumnProperty(name="quantity", type="double"),
+                        glue.CfnTable.ColumnProperty(name="date_received", type="string"),
+                        glue.CfnTable.ColumnProperty(name="type", type="string"),
+                    ],
+                ),
+            ),
+        ).add_dependency(t212_database)
+
+        glue.CfnTable(
+            self, "T212PositionsTable",
+            catalog_id=self.account,
+            database_name="trading212_db",
+            table_input=glue.CfnTable.TableInputProperty(
+                name="positions",
+                description="Weekly Trading212 position snapshots",
+                table_type="EXTERNAL_TABLE",
+                parameters={"classification": "json"},
+                partition_keys=[
+                    glue.CfnTable.ColumnProperty(name="date", type="string")
+                ],
+                storage_descriptor=glue.CfnTable.StorageDescriptorProperty(
+                    location="s3://trading212-pipeline-john/positions/",
+                    input_format="org.apache.hadoop.mapred.TextInputFormat",
+                    output_format="org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat",
+                    serde_info=glue.CfnTable.SerdeInfoProperty(
+                        serialization_library="org.openx.data.jsonserde.JsonSerDe",
+                    ),
+                    columns=[
+                        glue.CfnTable.ColumnProperty(name="ticker", type="string"),
+                        glue.CfnTable.ColumnProperty(name="quantity", type="double"),
+                        glue.CfnTable.ColumnProperty(name="avg_price", type="double"),
+                        glue.CfnTable.ColumnProperty(name="current_price", type="double"),
+                        glue.CfnTable.ColumnProperty(name="value", type="double"),
+                        glue.CfnTable.ColumnProperty(name="ppl", type="double"),
+                        glue.CfnTable.ColumnProperty(name="fx_ppl", type="double"),
+                        glue.CfnTable.ColumnProperty(name="initial_fill_date", type="string"),
+                    ],
+                ),
+            ),
+        ).add_dependency(t212_database)

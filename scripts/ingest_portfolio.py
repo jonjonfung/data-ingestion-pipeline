@@ -1,6 +1,6 @@
-from etoro.data_sources import fetch_portfolio
-from etoro.data_loader import save_portfolio
-from etoro.instruments import fetch_instruments, save_instruments
+from sources.etoro.data_sources import fetch_portfolio
+from sources.etoro.data_loader import save_portfolio
+from sources.etoro.instruments import fetch_instruments, save_instruments
 
 data = fetch_portfolio("real")
 save_portfolio(data)
